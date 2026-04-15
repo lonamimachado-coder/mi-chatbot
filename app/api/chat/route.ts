@@ -25,11 +25,11 @@ export async function POST(request: Request) {
 
   const requestBody = {
     model: 'groq',
-    prompt: `${systemPromptParts.join('\n')}\n\nCliente: ${prompt}\nChatbot:`,
-    max_tokens: 300,
+    input: `${systemPromptParts.join('\n')}\n\nCliente: ${prompt}\nChatbot:`,
+    max_output_tokens: 300,
   };
 
-  const response = await fetch('https://api.groq.com/v1/ai/generate', {
+  const response = await fetch('https://api.groq.com/v1/ai/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
