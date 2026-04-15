@@ -90,8 +90,20 @@ function hasBusinessInfo(business: Business) {
   );
 }
 
+function normalizePrompt(prompt: string) {
+  return prompt.trim().toLowerCase();
+}
+
+function isGreeting(prompt: string) {
+  return /^(hol+a+|buenas|buenos dias|buen día|buen dia|buenas tardes|buenas noches)[!. ]*$/i.test(prompt);
+}
+
 function isDismissal(prompt: string) {
   return /^(nada|en nada|no gracias|no,? gracias|todo bien|todo bien gracias|ok|dale|listo)[!. ]*$/i.test(prompt);
+}
+
+function isTinyTalk(prompt: string) {
+  return /^(a|ah|eh|hm|mm|xd|jaja|jsjs|aja|ajaj|jeje)[!. ]*$/i.test(prompt);
 }
 
 function isBusinessQuestion(prompt: string) {
@@ -100,9 +112,18 @@ function isBusinessQuestion(prompt: string) {
 
 function buildFallbackReply(prompt: string, business: Business) {
   const normalizedPrompt = prompt.trim();
+  const chatbotName = getChatbotName(business.name);
 
   if (isDismissal(normalizedPrompt)) {
     return 'Bueno, cuando necesites algo decime.';
+  }
+
+  if (isTinyTalk(normalizedPrompt)) {
+    return 'Decime qué necesitás y te ayudo.';
+  }
+
+  if (isGreeting(normalizedPrompt)) {
+    return `Hola, soy ${chatbotName}. ¿En qué te puedo ayudar?`;
   }
 
   if (isBusinessQuestion(normalizedPrompt) && !hasBusinessInfo(business)) {
@@ -123,6 +144,12 @@ export async function POST(request: Request) {
 
   if (!prompt) {
     return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+  }
+
+  const normalizedPrompt = normalizePrompt(prompt);
+
+  if (isDismissal(normalizedPrompt) || isTinyTalk(normalizedPrompt) || (isGreeting(normalizedPrompt) && !hasBusinessInfo(business)) || (isBusinessQuestion(normalizedPrompt) && !hasBusinessInfo(business))) {
+    return NextResponse.json({ text: buildFallbackReply(prompt, business) });
   }
 
   const apiKey = process.env.GROQ_API_KEY;
