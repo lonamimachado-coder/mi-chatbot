@@ -123,6 +123,14 @@ function solveSimpleMath(prompt: string) {
   }
 }
 
+function isGreeting(prompt: string) {
+  return /^(hol+a+|buenas|buenos dias|buen día|buen dia|buenas tardes|buenas noches)[!. ]*$/i.test(prompt);
+}
+
+function isShortDismissal(prompt: string) {
+  return /^(nada|en nada|todo bien|todo bien gracias|no gracias|no,? gracias|ok|dale|d|listo)[!. ]*$/i.test(prompt);
+}
+
 function buildFallbackReply(prompt: string, business: Business) {
   const cleanPrompt = prompt.trim().toLowerCase();
   const chatbotName = getChatbotName(business.name);
@@ -133,15 +141,19 @@ function buildFallbackReply(prompt: string, business: Business) {
     return mathResult;
   }
 
-  if (/^(hol+a+|buenas|buenos dias|buen día|buen dia|buenas tardes|buenas noches)[!. ]*$/i.test(cleanPrompt)) {
+  if (isGreeting(cleanPrompt)) {
     return `Hola, soy ${chatbotName}. ¿En qué te puedo ayudar?`;
+  }
+
+  if (isShortDismissal(cleanPrompt)) {
+    return 'Perfecto. Si más adelante necesitás algo, acá estoy.';
   }
 
   if (firstProduct) {
     return `Hola, soy ${chatbotName}. Te puedo ayudar con información sobre ${firstProduct} y el resto de los productos. Decime qué necesitás.`;
   }
 
-  return `Hola, soy ${chatbotName}. ¿En qué te puedo ayudar?`;
+  return `Entiendo. Contame qué necesitás y te ayudo.`;
 }
 
 export async function POST(request: Request) {
