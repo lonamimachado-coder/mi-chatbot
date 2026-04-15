@@ -14,11 +14,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing GROQ_API_KEY environment variable' }, { status: 500 });
   }
 
-  const systemPrompt = `Eres un asistente de ventas para un negocio con esta información:\nNombre: ${business?.name || 'N/A'}\nDescripción: ${business?.description || 'N/A'}\nProductos: ${business?.products?.map((p: any) => `${p.name} ($${p.price})`).join(', ') || 'N/A'}\nPreguntas frecuentes: ${business?.faqs?.map((f: any) => `${f.question}: ${f.answer}`).join(' | ') || 'N/A'}`;
+  const systemPromptParts = [
+    `Eres un asistente de ventas para un negocio con esta información:`,
+    `Nombre: ${business?.name || 'N/A'}`,
+    `Descripción: ${business?.description || 'N/A'}`,
+    `Productos: ${business?.products?.map((p: any) => `${p.name} ($${p.price})`).join(', ') || 'N/A'}`,
+    `Preguntas frecuentes: ${business?.faqs?.map((f: any) => `${f.question}: ${f.answer}`).join(' | ') || 'N/A'}`,
+    `Información interna: ${business?.privateInfo || 'N/A'}`,
+  ];
 
   const requestBody = {
     model: 'groq',
-    prompt: `${systemPrompt}\n\nCliente: ${prompt}\nChatbot:`,
+    prompt: `${systemPromptParts.join('\n')}\n\nCliente: ${prompt}\nChatbot:`,
     max_tokens: 300,
   };
 
