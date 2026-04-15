@@ -1,29 +1,30 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { auth, db } from '../../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import {
-  collection,
-  getDocs,
-  doc,
-  updateDoc,
-  setDoc,
-  arrayUnion,
   arrayRemove,
-  increment,
+  arrayUnion,
+  collection,
+  doc,
   getDoc,
+  getDocs,
+  increment,
+  setDoc,
+  updateDoc,
 } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 interface Business {
   name: string;
   description: string;
   products: Product[];
   faqs: FAQ[];
-  iconUrl?: string;
   likes?: number;
   saves?: number;
+  isPrivate?: boolean;
 }
 
 interface Product {
@@ -41,11 +42,11 @@ interface FAQ {
 
 export default function Feed() {
   const [businesses, setBusinesses] = useState<Array<{ id: string; data: Business }>>([]);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [savedBots, setSavedBots] = useState<string[]>([]);
   const [likedBots, setLikedBots] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     const fetchFeed = async () => {
@@ -53,10 +54,13 @@ export default function Feed() {
         const querySnapshot = await getDocs(collection(db, 'businesses'));
         const items: Array<{ id: string; data: Business }> = [];
         querySnapshot.forEach((docSnap) => {
-          items.push({ id: docSnap.id, data: docSnap.data() as Business });
+          const data = docSnap.data() as Business;
+          if (!data.isPrivate) {
+            items.push({ id: docSnap.id, data });
+          }
         });
         setBusinesses(items);
-      } catch (err) {
+      } catch {
         setError('Error cargando el feed.');
       }
     };
@@ -77,12 +81,16 @@ export default function Feed() {
         setSavedBots([]);
         setLikedBots([]);
       }
-      setLoading(false);
     });
 
     fetchFeed();
     return unsubscribe;
   }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/auth/login');
+  };
 
   const toggleSave = async (businessId: string) => {
     if (!user) {
@@ -104,7 +112,7 @@ export default function Feed() {
         await updateDoc(businessRef, { saves: increment(1) });
         setSavedBots([...savedBots, businessId]);
       }
-    } catch (err) {
+    } catch {
       setError('No se pudo actualizar el guardado.');
     }
   };
@@ -129,7 +137,7 @@ export default function Feed() {
         await updateDoc(businessRef, { likes: increment(1) });
         setLikedBots([...likedBots, businessId]);
       }
-    } catch (err) {
+    } catch {
       setError('No se pudo actualizar el like.');
     }
   };
@@ -138,18 +146,28 @@ export default function Feed() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Feed de Chatbots</h1>
-            <p className="mt-2 text-gray-600">Explora chatbots de negocios reales. Dale like o guarda tus favoritos.</p>
+            <p className="mt-2 text-gray-600">Explora chatbots públicos de negocios reales.</p>
           </div>
-          <Link
-            href="/auth/login"
-            className="inline-flex items-center justify-center rounded-full border border-blue-600 bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
-          >
-            {user ? 'Ver tu cuenta' : 'Iniciar sesión'}
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={user ? '/dashboard' : '/auth/login'}
+              className="inline-flex items-center justify-center rounded-full border border-blue-600 bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              {user ? 'Ir al panel' : 'Iniciar sesión'}
+            </Link>
+            {user && (
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-100"
+              >
+                Cerrar sesión
+              </button>
+            )}
+          </div>
         </div>
 
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
@@ -157,20 +175,13 @@ export default function Feed() {
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {businesses.map((business) => (
             <div key={business.id} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  {business.data.iconUrl ? (
-                    <img src={business.data.iconUrl} alt="Icono del chatbot" className="h-12 w-12 rounded-full object-cover" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">🤖</div>
-                  )}
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{business.data.name}</h2>
-                    <p className="text-sm text-gray-500">{business.data.description}</p>
-                  </div>
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">{business.data.name}</h2>
+                  <p className="text-sm text-gray-500">{business.data.description}</p>
                 </div>
                 <div className="space-x-2 text-sm text-gray-500">
-                  <span>{getCount(business.data.likes)} ❤️</span>
+                  <span>{getCount(business.data.likes)} ♥</span>
                   <span>{getCount(business.data.saves)} 📌</span>
                 </div>
               </div>

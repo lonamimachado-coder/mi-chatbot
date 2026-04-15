@@ -10,7 +10,6 @@ interface Business {
   description: string;
   products: Product[];
   faqs: FAQ[];
-  iconUrl?: string;
   privateInfo?: string;
 }
 
@@ -33,6 +32,11 @@ interface Message {
   sender: 'user' | 'bot';
 }
 
+function getChatbotName(businessName?: string) {
+  const cleanName = businessName?.trim();
+  return cleanName ? `${cleanName} ChatBot` : 'Mi ChatBot';
+}
+
 export default function Chat() {
   const { id } = useParams();
   const [business, setBusiness] = useState<Business | null>(null);
@@ -46,8 +50,15 @@ export default function Chat() {
         const docRef = doc(db, 'businesses', id as string);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setBusiness(docSnap.data() as Business);
-          setMessages([{ id: '1', text: `Hola, soy el chatbot de ${docSnap.data().name}. ¿En qué te puedo ayudar?`, sender: 'bot' }]);
+          const businessData = docSnap.data() as Business;
+          setBusiness(businessData);
+          setMessages([
+            {
+              id: '1',
+              text: `Hola, soy ${getChatbotName(businessData.name)}. ¿En qué te puedo ayudar?`,
+              sender: 'bot',
+            },
+          ]);
         }
       }
       setLoading(false);
@@ -87,21 +98,18 @@ export default function Chat() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <header className="bg-white shadow p-4 flex items-center gap-4">
-        {business.iconUrl && (
-          <img src={business.iconUrl} alt="Icono del negocio" className="h-16 w-16 rounded-full object-cover" />
-        )}
+      <header className="bg-white shadow p-4">
         <div>
-          <h1 className="text-xl font-bold">{business.name}</h1>
+          <h1 className="text-xl font-bold">{getChatbotName(business.name)}</h1>
           <p>{business.description}</p>
         </div>
       </header>
 
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-2xl mx-auto space-y-4">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-xs px-4 py-2 rounded-lg ${msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+              <div className={`max-w-xs rounded-lg px-4 py-2 ${msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
                 {msg.text}
               </div>
             </div>
@@ -115,11 +123,11 @@ export default function Chat() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             placeholder="Escribe tu mensaje..."
-            className="flex-1 border rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded-l border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <button onClick={sendMessage} className="bg-blue-500 text-white px-6 py-2 rounded-r hover:bg-blue-600">
+          <button onClick={sendMessage} className="rounded-r bg-blue-500 px-6 py-2 text-white hover:bg-blue-600">
             Enviar
           </button>
         </div>

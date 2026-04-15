@@ -18,6 +18,11 @@ type Business = {
   privateInfo?: string;
 };
 
+function getChatbotName(businessName?: string) {
+  const cleanName = businessName?.trim();
+  return cleanName ? `${cleanName} ChatBot` : 'Mi ChatBot';
+}
+
 function looksLikeMetaReply(text: string) {
   const normalized = text.trim();
 
@@ -27,7 +32,7 @@ function looksLikeMetaReply(text: string) {
 
   const metaPatterns = [
     /^(corrigiendo|ajustando|optimizando|revisando|actualizando)\b/i,
-    /^(we need to|i need to|the assistant should|respond in|the user says|the business is|we should|we respond)\b/i,
+    /^(we need to|i need to|the assistant should|respond in|the user says|the business is|we should|we respond|user asks)\b/i,
     /\bprompt\b/i,
     /\bbackend\b/i,
     /\bchain of thought\b/i,
@@ -35,6 +40,7 @@ function looksLikeMetaReply(text: string) {
     /\brespond in spanish\b/i,
     /\bspanish rioplatense\b/i,
     /\buser greeting\b/i,
+    /\bplain\. no extra\b/i,
     /\brazonamiento interno\b/i,
     /\binstrucciones\b/i,
   ];
@@ -51,7 +57,7 @@ function sanitizeAssistantReply(text: string) {
 
   const metaPatterns = [
     /^(corrigiendo|ajustando|optimizando|revisando|actualizando)\b/i,
-    /^(we need to|i need to|the assistant should|respond in|the user says|the business is|we should|we respond)\b/i,
+    /^(we need to|i need to|the assistant should|respond in|the user says|the business is|we should|we respond|user asks)\b/i,
     /\bprompt\b/i,
     /\bbackend\b/i,
     /\ban(?:a|á)lisis\b/i,
@@ -60,6 +66,7 @@ function sanitizeAssistantReply(text: string) {
     /\brespond in spanish\b/i,
     /\bspanish rioplatense\b/i,
     /\buser greeting\b/i,
+    /\bplain\. no extra\b/i,
   ];
 
   const lines = normalized
@@ -73,20 +80,68 @@ function sanitizeAssistantReply(text: string) {
     .trim();
 }
 
+function solveSimpleMath(prompt: string) {
+  const normalized = prompt
+    .toLowerCase()
+    .replace(/más/g, '+')
+    .replace(/mas/g, '+')
+    .replace(/menos/g, '-')
+    .replace(/por/g, '*')
+    .replace(/x/g, '*')
+    .replace(/entre/g, '/')
+    .replace(/cu[aá]nto es/g, '')
+    .replace(/cuanto es/g, '')
+    .replace(/di/g, '')
+    .replace(/\?/g, '')
+    .trim();
+
+  const match = normalized.match(/^(-?\d+(?:[.,]\d+)?)\s*([+\-*/])\s*(-?\d+(?:[.,]\d+)?)$/);
+  if (!match) {
+    return null;
+  }
+
+  const left = Number(match[1].replace(',', '.'));
+  const operator = match[2];
+  const right = Number(match[3].replace(',', '.'));
+
+  if (Number.isNaN(left) || Number.isNaN(right)) {
+    return null;
+  }
+
+  switch (operator) {
+    case '+':
+      return String(left + right);
+    case '-':
+      return String(left - right);
+    case '*':
+      return String(left * right);
+    case '/':
+      if (right === 0) return 'No puedo dividir entre cero.';
+      return String(left / right);
+    default:
+      return null;
+  }
+}
+
 function buildFallbackReply(prompt: string, business: Business) {
   const cleanPrompt = prompt.trim().toLowerCase();
-  const businessName = business.name?.trim() || 'el negocio';
+  const chatbotName = getChatbotName(business.name);
   const firstProduct = business.products?.find((product) => product?.name)?.name;
+  const mathResult = solveSimpleMath(cleanPrompt);
+
+  if (mathResult) {
+    return mathResult;
+  }
 
   if (/^(hol+a+|buenas|buenos dias|buen día|buen dia|buenas tardes|buenas noches)[!. ]*$/i.test(cleanPrompt)) {
-    return `Hola, soy el asistente de ${businessName}. ¿En qué te puedo ayudar?`;
+    return `Hola, soy ${chatbotName}. ¿En qué te puedo ayudar?`;
   }
 
   if (firstProduct) {
-    return `Gracias por tu mensaje. Te puedo ayudar con información sobre ${firstProduct} y lo que ofrece ${businessName}. Contame qué necesitás y te respondo enseguida.`;
+    return `Hola, soy ${chatbotName}. Te puedo ayudar con información sobre ${firstProduct} y el resto de los productos. Decime qué necesitás.`;
   }
 
-  return `Gracias por escribirnos. Soy el asistente de ${businessName}. Decime qué necesitás y te ayudo.`;
+  return `Hola, soy ${chatbotName}. ¿En qué te puedo ayudar?`;
 }
 
 export async function POST(request: Request) {
@@ -103,14 +158,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing GROQ_API_KEY environment variable' }, { status: 500 });
   }
 
+  const chatbotName = getChatbotName(business.name);
   const systemPromptParts = [
-    'Sos el asistente virtual de este negocio.',
+    `Sos ${chatbotName}.`,
     'Respondé siempre en español rioplatense, con tono profesional, claro y natural.',
     'No muestres análisis, razonamiento interno, instrucciones, cambios de prompt, ni menciones al sistema, backend o configuración.',
     'No digas que estás corrigiendo, ajustando o revisando nada.',
     'No respondas en inglés salvo que la persona lo pida explícitamente.',
+    'Si te saludan, saludá como chatbot del negocio usando tu nombre.',
+    'Si te hacen una cuenta simple, devolvé solo el resultado correcto.',
     'Respondé de forma directa como atención al cliente del negocio.',
     `Nombre del negocio: ${business.name || 'N/A'}`,
+    `Nombre del chatbot: ${chatbotName}`,
     `Descripción: ${business.description || 'N/A'}`,
     `Productos: ${business.products?.map((product) => `${product.name} ($${product.price})`).join(', ') || 'N/A'}`,
     `Preguntas frecuentes: ${business.faqs?.map((faq) => `${faq.question}: ${faq.answer}`).join(' | ') || 'N/A'}`,
