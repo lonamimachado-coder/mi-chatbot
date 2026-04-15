@@ -1,0 +1,43 @@
+import { NextResponse } from 'next/server';
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  const prompt = body.prompt as string | undefined;
+  const business = body.business;
+
+  if (!prompt) {
+    return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+  }
+
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Missing GROQ_API_KEY environment variable' }, { status: 500 });
+  }
+
+  const systemPrompt = `Eres un asistente de ventas para un negocio con esta información:\nNombre: ${business?.name || 'N/A'}\nDescripción: ${business?.description || 'N/A'}\nProductos: ${business?.products?.map((p: any) => `${p.name} ($${p.price})`).join(', ') || 'N/A'}\nPreguntas frecuentes: ${business?.faqs?.map((f: any) => `${f.question}: ${f.answer}`).join(' | ') || 'N/A'}`;
+
+  const requestBody = {
+    model: 'groq',
+    prompt: `${systemPrompt}\n\nCliente: ${prompt}\nChatbot:`,
+    max_tokens: 300,
+  };
+
+  const response = await fetch('https://api.groq.com/v1/ai/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return NextResponse.json({ error: `Groq API error: ${errorText}` }, { status: response.status });
+  }
+
+  const result = await response.json();
+  const text = result?.output?.[0]?.content || result?.text || 'No se obtuvo respuesta de Groq.';
+
+  return NextResponse.json({ text });
+}
