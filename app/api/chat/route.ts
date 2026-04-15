@@ -114,20 +114,21 @@ export async function POST(request: Request) {
 
   const requestBody = {
     model: 'openai/gpt-oss-20b',
-    input: [
+    messages: [
       {
         role: 'system',
-        content: systemPromptParts.join('\n'),
+        content: `${systemPromptParts.join('\n')}\nRespondé únicamente con el mensaje final para la persona usuaria.`,
       },
       {
         role: 'user',
         content: prompt,
       },
     ],
-    max_output_tokens: 300,
+    temperature: 0.9,
+    max_tokens: 300,
   };
 
-  const response = await fetch('https://api.groq.com/openai/v1/responses', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -142,28 +143,21 @@ export async function POST(request: Request) {
   }
 
   const result = await response.json();
-  let text = result?.output_text || '';
+  const rawMessage = result?.choices?.[0]?.message?.content;
+  let text = '';
 
-  if (!text) {
-    const rawOutput = result?.output?.[0]?.content;
-    if (Array.isArray(rawOutput)) {
-      text = rawOutput
-        .map((item: { text?: string } | string) => {
-          if (typeof item === 'string') return item;
-          return item?.text || '';
-        })
-        .join('');
-    } else if (typeof rawOutput === 'string') {
-      text = rawOutput;
-    } else {
-      text = result?.text || '';
-    }
+  if (typeof rawMessage === 'string') {
+    text = rawMessage;
+  } else if (Array.isArray(rawMessage)) {
+    text = rawMessage
+      .map((item: { type?: string; text?: string }) => (item?.type === 'text' ? item.text || '' : ''))
+      .join('');
   }
 
   text = sanitizeAssistantReply(text);
 
   if (!text || looksLikeMetaReply(text)) {
-    text = '';
+    return NextResponse.json({ error: 'No se pudo obtener una respuesta válida de Groq.' }, { status: 502 });
   }
 
   return NextResponse.json({ text });

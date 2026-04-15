@@ -43,6 +43,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchBusiness = async () => {
@@ -62,6 +63,7 @@ export default function Chat() {
 
   const sendMessage = async () => {
     if (!input.trim() || !business) return;
+    setError('');
     const userMessage: Message = { id: Date.now().toString(), text: input, sender: 'user' };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -74,13 +76,21 @@ export default function Chat() {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        setError(typeof data?.error === 'string' ? data.error : 'No se pudo obtener respuesta del modelo.');
+        return;
+      }
+
       const botResponse = typeof data?.text === 'string' ? data.text.trim() : '';
 
       if (botResponse) {
         const botMessage: Message = { id: (Date.now() + 1).toString(), text: botResponse, sender: 'bot' };
         setMessages((prev) => [...prev, botMessage]);
+      } else {
+        setError('Groq no devolvió texto para mostrar.');
       }
     } catch {
+      setError('No se pudo conectar con Groq.');
       return;
     }
   };
@@ -111,17 +121,22 @@ export default function Chat() {
 
       <div className="bg-white p-4 border-t">
         <div className="max-w-2xl mx-auto flex">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="Escribe tu mensaje..."
-            className="flex-1 rounded-l border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button onClick={sendMessage} className="rounded-r bg-blue-500 px-6 py-2 text-white hover:bg-blue-600">
-            Enviar
-          </button>
+          <div className="w-full">
+            {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+            <div className="flex">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Escribe tu mensaje..."
+                className="flex-1 rounded-l border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button onClick={sendMessage} className="rounded-r bg-blue-500 px-6 py-2 text-white hover:bg-blue-600">
+                Enviar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
