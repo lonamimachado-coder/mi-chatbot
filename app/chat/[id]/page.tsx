@@ -10,6 +10,8 @@ interface Business {
   description: string;
   products: Product[];
   faqs: FAQ[];
+  iconUrl?: string;
+  privateInfo?: string;
 }
 
 interface Product {
@@ -67,7 +69,7 @@ export default function Chat() {
       });
 
       const data = await response.json();
-      const botResponse = data?.text || 'Lo siento, hubo un error al procesar la respuesta.';
+      const botResponse = data?.text || data?.error || 'Lo siento, hubo un error al procesar la respuesta.';
       const botMessage: Message = { id: (Date.now() + 1).toString(), text: botResponse, sender: 'bot' };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
@@ -85,9 +87,14 @@ export default function Chat() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <header className="bg-white shadow p-4">
-        <h1 className="text-xl font-bold">{business.name}</h1>
-        <p>{business.description}</p>
+      <header className="bg-white shadow p-4 flex items-center gap-4">
+        {business.iconUrl && (
+          <img src={business.iconUrl} alt="Icono del negocio" className="h-16 w-16 rounded-full object-cover" />
+        )}
+        <div>
+          <h1 className="text-xl font-bold">{business.name}</h1>
+          <p>{business.description}</p>
+        </div>
       </header>
 
       <div className="flex-1 p-4 overflow-y-auto">

@@ -37,7 +37,23 @@ export async function POST(request: Request) {
   }
 
   const result = await response.json();
-  const text = result?.output?.[0]?.content || result?.text || 'No se obtuvo respuesta de Groq.';
+  const rawOutput = result?.output?.[0]?.content;
+  let text = '';
+
+  if (Array.isArray(rawOutput)) {
+    text = rawOutput.map((item: any) => {
+      if (typeof item === 'string') return item;
+      return item?.text || '';
+    }).join('');
+  } else if (typeof rawOutput === 'string') {
+    text = rawOutput;
+  } else {
+    text = result?.text || '';
+  }
+
+  if (!text) {
+    text = 'No se obtuvo respuesta de Groq.';
+  }
 
   return NextResponse.json({ text });
 }

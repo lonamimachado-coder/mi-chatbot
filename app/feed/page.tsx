@@ -21,6 +21,7 @@ interface Business {
   description: string;
   products: Product[];
   faqs: FAQ[];
+  iconUrl?: string;
   likes?: number;
   saves?: number;
 }
@@ -156,10 +157,17 @@ export default function Feed() {
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {businesses.map((business) => (
             <div key={business.id} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">{business.data.name}</h2>
-                  <p className="text-sm text-gray-500">{business.data.description}</p>
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  {business.data.iconUrl ? (
+                    <img src={business.data.iconUrl} alt="Icono del chatbot" className="h-12 w-12 rounded-full object-cover" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">🤖</div>
+                  )}
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">{business.data.name}</h2>
+                    <p className="text-sm text-gray-500">{business.data.description}</p>
+                  </div>
                 </div>
                 <div className="space-x-2 text-sm text-gray-500">
                   <span>{getCount(business.data.likes)} ❤️</span>

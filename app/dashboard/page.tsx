@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '../../lib/firebase';
+import { auth, db, storage } from '../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 
 interface Business {
@@ -11,6 +12,8 @@ interface Business {
   description: string;
   products: Product[];
   faqs: FAQ[];
+  iconUrl?: string;
+  privateInfo?: string;
 }
 
 interface Product {
@@ -34,6 +37,8 @@ export default function Dashboard() {
   const [showFaqForm, setShowFaqForm] = useState(false);
   const [newProduct, setNewProduct] = useState<Product>({ id: '', name: '', description: '', price: 0 });
   const [newFaq, setNewFaq] = useState<FAQ>({ id: '', question: '', answer: '' });
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -92,6 +97,28 @@ export default function Dashboard() {
     setBusiness({ ...business, faqs: business.faqs.filter(f => f.id !== id) });
   };
 
+  const uploadIcon = async () => {
+    if (!user || !iconFile) {
+      alert('Selecciona un archivo de imagen antes de subir.');
+      return;
+    }
+
+    try {
+      setUploadingIcon(true);
+      const storageRef = ref(storage, `business-icons/${user.uid}/${iconFile.name}`);
+      await uploadBytes(storageRef, iconFile);
+      const url = await getDownloadURL(storageRef);
+      setBusiness({ ...business, iconUrl: url });
+      setIconFile(null);
+      alert('Icono subido correctamente.');
+    } catch (error) {
+      console.error(error);
+      alert('No se pudo subir el icono.');
+    } finally {
+      setUploadingIcon(false);
+    }
+  };
+
   if (loading) return <div>Cargando...</div>;
 
   return (
@@ -118,6 +145,35 @@ export default function Dashboard() {
                 onChange={(e) => setBusiness({ ...business, description: e.target.value })}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 rows={4}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Icono del Chatbot</label>
+              {business.iconUrl && (
+                <img src={business.iconUrl} alt="Icono del chatbot" className="h-24 w-24 rounded-full object-cover mb-3" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setIconFile(e.target.files?.[0] || null)}
+                className="mt-2 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <button
+                onClick={uploadIcon}
+                disabled={uploadingIcon}
+                className="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {uploadingIcon ? 'Subiendo...' : 'Subir icono'}
+              </button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Notas privadas para el chatbot</label>
+              <textarea
+                value={business.privateInfo || ''}
+                onChange={(e) => setBusiness({ ...business, privateInfo: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                placeholder="Información que solo usa el chatbot internamente para responder mejor"
               />
             </div>
           </div>
