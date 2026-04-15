@@ -25,7 +25,16 @@ export async function POST(request: Request) {
 
   const requestBody = {
     model: 'openai/gpt-oss-20b',
-    input: `${systemPromptParts.join('\n')}\n\nCliente: ${prompt}\nChatbot:`,
+    input: [
+      {
+        role: 'system',
+        content: systemPromptParts.join('\n'),
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
     max_output_tokens: 300,
   };
 
