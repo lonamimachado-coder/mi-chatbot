@@ -80,6 +80,42 @@ function sanitizeAssistantReply(text: string) {
     .trim();
 }
 
+function hasBusinessInfo(business: Business) {
+  return Boolean(
+    business.name?.trim() ||
+      business.description?.trim() ||
+      business.products?.length ||
+      business.faqs?.length ||
+      business.privateInfo?.trim()
+  );
+}
+
+function isDismissal(prompt: string) {
+  return /^(nada|en nada|no gracias|no,? gracias|todo bien|todo bien gracias|ok|dale|listo)[!. ]*$/i.test(prompt);
+}
+
+function isBusinessQuestion(prompt: string) {
+  return /(negocio|empresa|tienda|qué es|que es|quienes son|quiénes son|a qué se dedican|que venden|qué venden)/i.test(prompt);
+}
+
+function buildFallbackReply(prompt: string, business: Business) {
+  const normalizedPrompt = prompt.trim();
+
+  if (isDismissal(normalizedPrompt)) {
+    return 'Bueno, cuando necesites algo decime.';
+  }
+
+  if (isBusinessQuestion(normalizedPrompt) && !hasBusinessInfo(business)) {
+    return 'Todavía no tengo información cargada sobre este negocio. Cuando la configuren, te la voy a poder contar mejor.';
+  }
+
+  if (!hasBusinessInfo(business)) {
+    return 'Todavía no me cargaron información del negocio, pero si querés podés preguntarme de nuevo cuando esté configurado.';
+  }
+
+  return 'No pude responder bien esta vez. Si querés, escribime de otra forma y pruebo de nuevo.';
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
   const prompt = body.prompt as string | undefined;
@@ -103,6 +139,8 @@ export async function POST(request: Request) {
     'No respondas en inglés salvo que la persona lo pida explícitamente.',
     'Si te saludan, saludá como chatbot del negocio usando tu nombre.',
     'Si te hacen una cuenta simple, devolvé solo el resultado correcto.',
+    'Si todavía no hay información cargada del negocio, decilo con claridad y de forma natural, sin inventar datos.',
+    'Si la persona dice que no necesita nada, despedite de forma breve y amable.',
     'Respondé de forma directa como atención al cliente del negocio.',
     `Nombre del negocio: ${business.name || 'N/A'}`,
     `Nombre del chatbot: ${chatbotName}`,
@@ -157,7 +195,7 @@ export async function POST(request: Request) {
   text = sanitizeAssistantReply(text);
 
   if (!text || looksLikeMetaReply(text)) {
-    return NextResponse.json({ error: 'No se pudo obtener una respuesta válida de Groq.' }, { status: 502 });
+    return NextResponse.json({ text: buildFallbackReply(prompt, business) });
   }
 
   return NextResponse.json({ text });
