@@ -52,13 +52,7 @@ export default function Chat() {
         if (docSnap.exists()) {
           const businessData = docSnap.data() as Business;
           setBusiness(businessData);
-          setMessages([
-            {
-              id: '1',
-              text: `Hola, soy ${getChatbotName(businessData.name)}. ¿En qué te puedo ayudar?`,
-              sender: 'bot',
-            },
-          ]);
+          setMessages([]);
         }
       }
       setLoading(false);
@@ -80,16 +74,14 @@ export default function Chat() {
       });
 
       const data = await response.json();
-      const botResponse = data?.text || data?.error || 'Lo siento, hubo un error al procesar la respuesta.';
-      const botMessage: Message = { id: (Date.now() + 1).toString(), text: botResponse, sender: 'bot' };
-      setMessages((prev) => [...prev, botMessage]);
+      const botResponse = typeof data?.text === 'string' ? data.text.trim() : '';
+
+      if (botResponse) {
+        const botMessage: Message = { id: (Date.now() + 1).toString(), text: botResponse, sender: 'bot' };
+        setMessages((prev) => [...prev, botMessage]);
+      }
     } catch {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Lo siento, no pude conectar con el servicio de IA.',
-        sender: 'bot',
-      };
-      setMessages((prev) => [...prev, botMessage]);
+      return;
     }
   };
 

@@ -80,82 +80,6 @@ function sanitizeAssistantReply(text: string) {
     .trim();
 }
 
-function solveSimpleMath(prompt: string) {
-  const normalized = prompt
-    .toLowerCase()
-    .replace(/más/g, '+')
-    .replace(/mas/g, '+')
-    .replace(/menos/g, '-')
-    .replace(/por/g, '*')
-    .replace(/x/g, '*')
-    .replace(/entre/g, '/')
-    .replace(/cu[aá]nto es/g, '')
-    .replace(/cuanto es/g, '')
-    .replace(/di/g, '')
-    .replace(/\?/g, '')
-    .trim();
-
-  const match = normalized.match(/^(-?\d+(?:[.,]\d+)?)\s*([+\-*/])\s*(-?\d+(?:[.,]\d+)?)$/);
-  if (!match) {
-    return null;
-  }
-
-  const left = Number(match[1].replace(',', '.'));
-  const operator = match[2];
-  const right = Number(match[3].replace(',', '.'));
-
-  if (Number.isNaN(left) || Number.isNaN(right)) {
-    return null;
-  }
-
-  switch (operator) {
-    case '+':
-      return String(left + right);
-    case '-':
-      return String(left - right);
-    case '*':
-      return String(left * right);
-    case '/':
-      if (right === 0) return 'No puedo dividir entre cero.';
-      return String(left / right);
-    default:
-      return null;
-  }
-}
-
-function isGreeting(prompt: string) {
-  return /^(hol+a+|buenas|buenos dias|buen día|buen dia|buenas tardes|buenas noches)[!. ]*$/i.test(prompt);
-}
-
-function isShortDismissal(prompt: string) {
-  return /^(nada|en nada|todo bien|todo bien gracias|no gracias|no,? gracias|ok|dale|d|listo)[!. ]*$/i.test(prompt);
-}
-
-function buildFallbackReply(prompt: string, business: Business) {
-  const cleanPrompt = prompt.trim().toLowerCase();
-  const chatbotName = getChatbotName(business.name);
-  const firstProduct = business.products?.find((product) => product?.name)?.name;
-  const mathResult = solveSimpleMath(cleanPrompt);
-
-  if (mathResult) {
-    return mathResult;
-  }
-
-  if (isGreeting(cleanPrompt)) {
-    return `Hola, soy ${chatbotName}. ¿En qué te puedo ayudar?`;
-  }
-
-  if (isShortDismissal(cleanPrompt)) {
-    return 'Perfecto. Si más adelante necesitás algo, acá estoy.';
-  }
-
-  if (firstProduct) {
-    return `Hola, soy ${chatbotName}. Te puedo ayudar con información sobre ${firstProduct} y el resto de los productos. Decime qué necesitás.`;
-  }
-
-  return `Entiendo. Contame qué necesitás y te ayudo.`;
-}
-
 export async function POST(request: Request) {
   const body = await request.json();
   const prompt = body.prompt as string | undefined;
@@ -239,7 +163,7 @@ export async function POST(request: Request) {
   text = sanitizeAssistantReply(text);
 
   if (!text || looksLikeMetaReply(text)) {
-    text = buildFallbackReply(prompt, business);
+    text = '';
   }
 
   return NextResponse.json({ text });
