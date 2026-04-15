@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db, storage } from '../../lib/firebase';
@@ -127,7 +128,15 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Panel de Control</h1>
 
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Información del Negocio</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <h2 className="text-xl font-semibold">Información del Negocio</h2>
+            <Link
+              href="/feed"
+              className="inline-flex items-center justify-center rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700"
+            >
+              Ver Feed de Chatbots
+            </Link>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Nombre del Negocio</label>
