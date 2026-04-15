@@ -27,11 +27,14 @@ function looksLikeMetaReply(text: string) {
 
   const metaPatterns = [
     /^(corrigiendo|ajustando|optimizando|revisando|actualizando)\b/i,
-    /^(we need to|i need to|the assistant should|respond in)\b/i,
+    /^(we need to|i need to|the assistant should|respond in|the user says|the business is|we should|we respond)\b/i,
     /\bprompt\b/i,
     /\bbackend\b/i,
     /\bchain of thought\b/i,
     /\bthinking\b/i,
+    /\brespond in spanish\b/i,
+    /\bspanish rioplatense\b/i,
+    /\buser greeting\b/i,
     /\brazonamiento interno\b/i,
     /\binstrucciones\b/i,
   ];
@@ -48,12 +51,15 @@ function sanitizeAssistantReply(text: string) {
 
   const metaPatterns = [
     /^(corrigiendo|ajustando|optimizando|revisando|actualizando)\b/i,
-    /^(we need to|i need to|the assistant should|respond in)\b/i,
+    /^(we need to|i need to|the assistant should|respond in|the user says|the business is|we should|we respond)\b/i,
     /\bprompt\b/i,
     /\bbackend\b/i,
     /\ban(?:a|á)lisis\b/i,
     /\bchain of thought\b/i,
     /\bthinking\b/i,
+    /\brespond in spanish\b/i,
+    /\bspanish rioplatense\b/i,
+    /\buser greeting\b/i,
   ];
 
   const lines = normalized
@@ -72,7 +78,7 @@ function buildFallbackReply(prompt: string, business: Business) {
   const businessName = business.name?.trim() || 'el negocio';
   const firstProduct = business.products?.find((product) => product?.name)?.name;
 
-  if (/^(hola|buenas|buenos dias|buen día|buen dia|buenas tardes|buenas noches)[!. ]*$/i.test(cleanPrompt)) {
+  if (/^(hol+a+|buenas|buenos dias|buen día|buen dia|buenas tardes|buenas noches)[!. ]*$/i.test(cleanPrompt)) {
     return `Hola, soy el asistente de ${businessName}. ¿En qué te puedo ayudar?`;
   }
 
