@@ -24,12 +24,12 @@ export async function POST(request: Request) {
   ];
 
   const requestBody = {
-    model: 'groq',
+    model: 'openai/gpt-oss-20b',
     input: `${systemPromptParts.join('\n')}\n\nCliente: ${prompt}\nChatbot:`,
     max_output_tokens: 300,
   };
 
-  const response = await fetch('https://api.groq.com/v1/ai/completions', {
+  const response = await fetch('https://api.groq.com/openai/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -44,18 +44,20 @@ export async function POST(request: Request) {
   }
 
   const result = await response.json();
-  const rawOutput = result?.output?.[0]?.content;
-  let text = '';
+  let text = result?.output_text || '';
 
-  if (Array.isArray(rawOutput)) {
-    text = rawOutput.map((item: any) => {
-      if (typeof item === 'string') return item;
-      return item?.text || '';
-    }).join('');
-  } else if (typeof rawOutput === 'string') {
-    text = rawOutput;
-  } else {
-    text = result?.text || '';
+  if (!text) {
+    const rawOutput = result?.output?.[0]?.content;
+    if (Array.isArray(rawOutput)) {
+      text = rawOutput.map((item: any) => {
+        if (typeof item === 'string') return item;
+        return item?.text || '';
+      }).join('');
+    } else if (typeof rawOutput === 'string') {
+      text = rawOutput;
+    } else {
+      text = result?.text || '';
+    }
   }
 
   if (!text) {
