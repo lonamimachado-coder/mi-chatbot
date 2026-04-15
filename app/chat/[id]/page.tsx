@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -47,7 +47,7 @@ export default function Chat() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setBusiness(docSnap.data() as Business);
-          setMessages([{ id: '1', text: `¡Hola! Soy el chatbot de ${docSnap.data().name}. ¿En qué puedo ayudarte?`, sender: 'bot' }]);
+          setMessages([{ id: '1', text: `Hola, soy el chatbot de ${docSnap.data().name}. ¿En qué te puedo ayudar?`, sender: 'bot' }]);
         }
       }
       setLoading(false);
@@ -58,7 +58,7 @@ export default function Chat() {
   const sendMessage = async () => {
     if (!input.trim() || !business) return;
     const userMessage: Message = { id: Date.now().toString(), text: input, sender: 'user' };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
 
     try {
@@ -71,14 +71,14 @@ export default function Chat() {
       const data = await response.json();
       const botResponse = data?.text || data?.error || 'Lo siento, hubo un error al procesar la respuesta.';
       const botMessage: Message = { id: (Date.now() + 1).toString(), text: botResponse, sender: 'bot' };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
+      setMessages((prev) => [...prev, botMessage]);
+    } catch {
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: 'Lo siento, no pude conectar con el servicio de IA.',
         sender: 'bot',
       };
-      setMessages(prev => [...prev, botMessage]);
+      setMessages((prev) => [...prev, botMessage]);
     }
   };
 
@@ -99,7 +99,7 @@ export default function Chat() {
 
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="max-w-2xl mx-auto space-y-4">
-          {messages.map(msg => (
+          {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-xs px-4 py-2 rounded-lg ${msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
                 {msg.text}
