@@ -54,7 +54,7 @@ Esta aplicación requiere un servidor Node.js. **GitHub Pages no funciona** porq
 2. Ve a https://vercel.com
 3. Conecta tu repositorio de GitHub
 4. Agrega la variable de entorno:
-   - `GROQ_API_KEY=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`
+   - `GROQ_API_KEY=tu_api_key_aqui` (obtén una en https://console.groq.com)
 5. Haz clic en "Deploy"
 
 Tu app estará disponible públicamente en una URL como `https://mi-chatbot.vercel.app`

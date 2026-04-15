@@ -24,7 +24,7 @@ Vercel es la plataforma oficial para Next.js y es completamente gratis para uso 
    - Selecciona tu repositorio de GitHub
    - Vercel detectará automáticamente que es un proyecto Next.js
    - Agrega las variables de entorno:
-     - `GROQ_API_KEY=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`
+     - `GROQ_API_KEY=tu_api_key_aqui` (obtén una en https://console.groq.com)
    - Haz clic en "Deploy"
 
 3. **Listo:** Tu app estará disponible en `https://tuproject.vercel.app`
